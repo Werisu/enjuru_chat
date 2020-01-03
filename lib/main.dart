@@ -120,6 +120,13 @@ class _TextComposerState extends State<TextComposer> {
   final _textController = TextEditingController();
   bool _isComposing = false;
 
+  void _reset(){
+    _textController.clear();
+    setState(() {
+      _isComposing = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return IconTheme(
@@ -150,6 +157,7 @@ class _TextComposerState extends State<TextComposer> {
                 },
                 onSubmitted: (text){
                   _handSubmitted(text);
+                  _reset();
                 },
               ),
             ),
@@ -160,12 +168,14 @@ class _TextComposerState extends State<TextComposer> {
                         child: Text("Enviar"),
                         onPressed: _isComposing ? () {
                           _handSubmitted(_textController.text);
+                          _reset();
                         } : null,
                       )
                     : IconButton(
                         icon: Icon(Icons.send),
                         onPressed: _isComposing ? () {
                           _handSubmitted(_textController.text);
+                          _reset();
                         } : null,
                       ))
           ],
