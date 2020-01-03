@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
   runApp(MyApp());
@@ -54,18 +58,19 @@ Future<Null> _ensureLoggedIn() async {
   }
 }
 
-_handSubmitted(String text) async {
+_handSubmitted(String text, DateTime time) async {
   await _ensureLoggedIn();
-  _sendMessage(text: text);
+  _sendMessage(text: text, time: time);
 }
 
-void _sendMessage({String text, String imageUrl}) {
+void _sendMessage({String text, String imageUrl, DateTime time}) {
   Firestore.instance.collection("messages").add(
       {
         "text": text,
         "imageUrl": imageUrl,
         "senderName": googleSignIn.currentUser.displayName,
-        "senderPhotoUrl": googleSignIn.currentUser.photoUrl
+        "senderPhotoUrl": googleSignIn.currentUser.photoUrl,
+        "time": time
       }
   );
 }
@@ -94,7 +99,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: <Widget>[
             Expanded(
               child: StreamBuilder(
-                stream: Firestore.instance.collection("messages").snapshots(),
+                stream: Firestore.instance.collection("messages").orderBy('time', descending: true).snapshots(),
                 builder: (context, snapshot){
                   switch(snapshot.connectionState){
                     case ConnectionState.none:
@@ -107,7 +112,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         reverse: true,
                         itemCount: snapshot.data.documents.length,
                         itemBuilder: (context, index){
-                          List r = snapshot.data.documents.reversed.toList();
+                          List r = snapshot.data.documents;
                           return ChatMessage(r[index].data);
                         }
                       );
@@ -168,7 +173,18 @@ class _TextComposerState extends State<TextComposer> {
             Container(
               child: IconButton(
                 icon: Icon(Icons.photo_camera),
-                onPressed: () {},
+                onPressed: () async{
+                  await _ensureLoggedIn();
+                  File imgFile = await ImagePicker.pickImage(source: ImageSource.camera);
+                  if(imgFile == null) return;
+                  StorageUploadTask task = FirebaseStorage.instance.ref().
+                  child(googleSignIn.currentUser.id.toString()
+                      + DateTime.now().millisecondsSinceEpoch.toString()).putFile(imgFile);
+                  StorageTaskSnapshot taskSnapshot = await task.onComplete;
+                  String url = await taskSnapshot.ref.getDownloadURL();
+                  DateTime time = DateTime.now();
+                  _sendMessage(imageUrl: url, time: time);
+                },
               ),
             ),
             Expanded(
@@ -182,7 +198,7 @@ class _TextComposerState extends State<TextComposer> {
                   });
                 },
                 onSubmitted: (text) {
-                  _handSubmitted(text);
+                  _handSubmitted(text, DateTime.now());
                   _reset();
                 },
               ),
@@ -195,14 +211,14 @@ class _TextComposerState extends State<TextComposer> {
                     ? CupertinoButton(
                   child: Text("Enviar"),
                   onPressed: _isComposing ? () {
-                    _handSubmitted(_textController.text);
+                    _handSubmitted(_textController.text, DateTime.now());
                     _reset();
                   } : null,
                 )
                     : IconButton(
                   icon: Icon(Icons.send),
                   onPressed: _isComposing ? () {
-                    _handSubmitted(_textController.text);
+                    _handSubmitted(_textController.text, DateTime.now());
                     _reset();
                   } : null,
                 ))
