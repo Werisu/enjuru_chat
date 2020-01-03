@@ -14,7 +14,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: "Enjuru Chats",
       debugShowCheckedModeBanner: false,
-      theme: Theme.of(context).platform == TargetPlatform.iOS
+      theme: Theme
+          .of(context)
+          .platform == TargetPlatform.iOS
           ? kIOSTheme
           : kDefaultTheme,
       home: ChatScreen(),
@@ -35,33 +37,35 @@ final ThemeData kDefaultTheme = ThemeData(
 final googleSignIn = GoogleSignIn();
 final auth = FirebaseAuth.instance;
 
-Future<Null> _ensureLoggedIn() async{
+Future<Null> _ensureLoggedIn() async {
   GoogleSignInAccount user = googleSignIn.currentUser;
-  if(user == null)
+  if (user == null)
     user = await googleSignIn.signInSilently();
 
-  if(user == null)
+  if (user == null)
     user = await googleSignIn.signIn();
 
-  if(await auth.currentUser() == null){
-    GoogleSignInAuthentication credential = await googleSignIn.currentUser.authentication;
+  if (await auth.currentUser() == null) {
+    GoogleSignInAuthentication credential = await googleSignIn.currentUser
+        .authentication;
     await auth.signInWithCredential(GoogleAuthProvider.
-    getCredential(idToken: credential.idToken, accessToken: credential.accessToken));
+    getCredential(
+        idToken: credential.idToken, accessToken: credential.accessToken));
   }
 }
 
-_handSubmitted(String text) async{
+_handSubmitted(String text) async {
   await _ensureLoggedIn();
   _sendMessage(text: text);
 }
 
-void _sendMessage({String text, String imageUrl}){
+void _sendMessage({String text, String imageUrl}) {
   Firestore.instance.collection("messages").add(
       {
-        "text" : text,
-        "imageUrl" : imageUrl,
-        "senderName" : googleSignIn.currentUser.displayName,
-        "senderPhotoUrl" : googleSignIn.currentUser.photoUrl
+        "text": text,
+        "imageUrl": imageUrl,
+        "senderName": googleSignIn.currentUser.displayName,
+        "senderPhotoUrl": googleSignIn.currentUser.photoUrl
       }
   );
 }
@@ -82,17 +86,33 @@ class _ChatScreenState extends State<ChatScreen> {
           title: Text("Enjuru Chats"),
           centerTitle: true,
           elevation:
-              Theme.of(context).platform == TargetPlatform.iOS ? 0.0 : 4.0,
+          Theme
+              .of(context)
+              .platform == TargetPlatform.iOS ? 0.0 : 4.0,
         ),
         body: Column(
           children: <Widget>[
             Expanded(
-              child: ListView(
-                children: <Widget>[
-                  ChatMessage(),
-                  ChatMessage(),
-                  ChatMessage(),
-                ],
+              child: StreamBuilder(
+                stream: Firestore.instance.collection("messages").snapshots(),
+                builder: (context, snapshot){
+                  switch(snapshot.connectionState){
+                    case ConnectionState.none:
+                    case ConnectionState.waiting:
+                      return Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    default:
+                      return ListView.builder(
+                        reverse: true,
+                        itemCount: snapshot.data.documents.length,
+                        itemBuilder: (context, index){
+                          List r = snapshot.data.documents.reversed.toList();
+                          return ChatMessage(r[index].data);
+                        }
+                      );
+                  }
+                },
               ),
             ),
             Divider(
@@ -100,7 +120,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: Theme
+                    .of(context)
+                    .cardColor,
               ),
               child: TextComposer(),
             )
@@ -120,7 +142,7 @@ class _TextComposerState extends State<TextComposer> {
   final _textController = TextEditingController();
   bool _isComposing = false;
 
-  void _reset(){
+  void _reset() {
     _textController.clear();
     setState(() {
       _isComposing = false;
@@ -130,12 +152,16 @@ class _TextComposerState extends State<TextComposer> {
   @override
   Widget build(BuildContext context) {
     return IconTheme(
-      data: IconThemeData(color: Theme.of(context).accentColor),
+      data: IconThemeData(color: Theme
+          .of(context)
+          .accentColor),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 0.0),
-        decoration: Theme.of(context).platform == TargetPlatform.iOS
+        decoration: Theme
+            .of(context)
+            .platform == TargetPlatform.iOS
             ? BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey[200])))
+            border: Border(top: BorderSide(color: Colors.grey[200])))
             : null,
         child: Row(
           children: <Widget>[
@@ -149,13 +175,13 @@ class _TextComposerState extends State<TextComposer> {
               child: TextField(
                 controller: _textController,
                 decoration:
-                    InputDecoration.collapsed(hintText: "Enviar uma mensagem"),
+                InputDecoration.collapsed(hintText: "Enviar uma mensagem"),
                 onChanged: (text) {
                   setState(() {
                     _isComposing = text.length > 0;
                   });
                 },
-                onSubmitted: (text){
+                onSubmitted: (text) {
                   _handSubmitted(text);
                   _reset();
                 },
@@ -163,21 +189,23 @@ class _TextComposerState extends State<TextComposer> {
             ),
             Container(
                 margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                child: Theme.of(context).platform == TargetPlatform.iOS
+                child: Theme
+                    .of(context)
+                    .platform == TargetPlatform.iOS
                     ? CupertinoButton(
-                        child: Text("Enviar"),
-                        onPressed: _isComposing ? () {
-                          _handSubmitted(_textController.text);
-                          _reset();
-                        } : null,
-                      )
+                  child: Text("Enviar"),
+                  onPressed: _isComposing ? () {
+                    _handSubmitted(_textController.text);
+                    _reset();
+                  } : null,
+                )
                     : IconButton(
-                        icon: Icon(Icons.send),
-                        onPressed: _isComposing ? () {
-                          _handSubmitted(_textController.text);
-                          _reset();
-                        } : null,
-                      ))
+                  icon: Icon(Icons.send),
+                  onPressed: _isComposing ? () {
+                    _handSubmitted(_textController.text);
+                    _reset();
+                  } : null,
+                ))
           ],
         ),
       ),
@@ -186,6 +214,11 @@ class _TextComposerState extends State<TextComposer> {
 }
 
 class ChatMessage extends StatelessWidget {
+
+  final Map<String, dynamic> data;
+
+  ChatMessage(this.data);
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -196,7 +229,8 @@ class ChatMessage extends StatelessWidget {
           Container(
             margin: const EdgeInsets.only(right: 10.0),
             child: CircleAvatar(
-              backgroundImage: NetworkImage("https://media-manager.noticiasaominuto.com/1920/1556264539/naom_5cb7221409201.jpg?crop_params=eyJsYW5kc2NhcGUiOnsiY3JvcFdpZHRoIjozNzYwLCJjcm9wSGVpZ2h0IjoyMTE1LCJjcm9wWCI6MCwiY3JvcFkiOjEzN30sInBvcnRyYWl0Ijp7ImNyb3BXaWR0aCI6MTQ4OSwiY3JvcEhlaWdodCI6MjY0OCwiY3JvcFgiOjExNTksImNyb3BZIjowfX0="),
+              backgroundImage: NetworkImage(
+                  data["senderPhotoUrl"]),
             ),
           ),
           Expanded(
@@ -204,12 +238,17 @@ class ChatMessage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  "Daniel",
-                  style: Theme.of(context).textTheme.subhead,
+                  data["senderName"],
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .subhead,
                 ),
                 Container(
                   margin: const EdgeInsets.only(top: 5.0),
-                  child: Text("teste"),
+                  child: data["imageUrl"] != null ?
+                    Image.network(data['imageUrl'], width: 250.0,) :
+                    Text(data["text"]),
                 )
               ],
             ),
