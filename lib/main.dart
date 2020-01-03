@@ -63,8 +63,8 @@ _handSubmitted(String text, DateTime time) async {
   _sendMessage(text: text, time: time);
 }
 
-void _sendMessage({String text, String imageUrl, DateTime time}) {
-  Firestore.instance.collection("messages").add(
+Future<DocumentReference> _sendMessage({String text, String imageUrl, DateTime time}) async{
+  DocumentReference dcRef = await Firestore.instance.collection("messages").add(
       {
         "text": text,
         "imageUrl": imageUrl,
@@ -73,6 +73,7 @@ void _sendMessage({String text, String imageUrl, DateTime time}) {
         "time": time
       }
   );
+  return dcRef;
 }
 
 class ChatScreen extends StatefulWidget {
@@ -174,16 +175,7 @@ class _TextComposerState extends State<TextComposer> {
               child: IconButton(
                 icon: Icon(Icons.photo_camera),
                 onPressed: () async{
-                  await _ensureLoggedIn();
-                  File imgFile = await ImagePicker.pickImage(source: ImageSource.camera);
-                  if(imgFile == null) return;
-                  StorageUploadTask task = FirebaseStorage.instance.ref().
-                  child(googleSignIn.currentUser.id.toString()
-                      + DateTime.now().millisecondsSinceEpoch.toString()).putFile(imgFile);
-                  StorageTaskSnapshot taskSnapshot = await task.onComplete;
-                  String url = await taskSnapshot.ref.getDownloadURL();
-                  DateTime time = DateTime.now();
-                  _sendMessage(imageUrl: url, time: time);
+                  _showOpctions(context);
                 },
               ),
             ),
@@ -237,41 +229,151 @@ class ChatMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Container(
-            margin: const EdgeInsets.only(right: 10.0),
-            child: CircleAvatar(
-              backgroundImage: NetworkImage(
-                  data["senderPhotoUrl"]),
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  data["senderName"],
-                  style: Theme
-                      .of(context)
-                      .textTheme
-                      .subhead,
-                ),
-                Container(
-                  margin: const EdgeInsets.only(top: 5.0),
-                  child: data["imageUrl"] != null ?
+
+    //Adicionado
+    _ensureLoggedIn();
+    if(googleSignIn.currentUser.displayName == data["senderName"]){
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Text(
+                    data["senderName"],
+                    style: Theme
+                        .of(context)
+                        .textTheme
+                        .subhead,
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(top: 5.0),
+                    child: data["imageUrl"] != null ?
                     Image.network(data['imageUrl'], width: 250.0,) :
                     Text(data["text"]),
-                )
-              ],
+                  )
+                ],
+              ),
             ),
-          )
-        ],
-      ),
-    );
+            Container(
+              margin: const EdgeInsets.only(left: 10.0),
+              child: CircleAvatar(
+                backgroundImage: NetworkImage(
+                    data["senderPhotoUrl"]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }else{
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              margin: const EdgeInsets.only(right: 10.0),
+              child: CircleAvatar(
+                backgroundImage: NetworkImage(
+                    data["senderPhotoUrl"]),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    data["senderName"],
+                    style: Theme
+                        .of(context)
+                        .textTheme
+                        .subhead,
+                  ),
+                  Container(
+                    margin: const EdgeInsets.only(top: 5.0),
+                    child: data["imageUrl"] != null ?
+                    Image.network(data['imageUrl'], width: 250.0,) :
+                    Text(data["text"]),
+                  )
+                ],
+              ),
+            )
+          ],
+        ),
+      );
+    }
+
   }
 }
 
+void _showOpctions(BuildContext context){
+  showModalBottomSheet(
+      context: context,
+      builder: (context){
+        return BottomSheet(
+          onClosing: (){},
+          builder: (context){
+            return Container(
+              padding: EdgeInsets.all(10.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Padding(
+                    padding: EdgeInsets.all(10.0),
+                    child: FlatButton(
+                      child: Icon(
+                        Icons.camera_alt,
+                      ),
+                      onPressed: (){
+                        _carregarArquivo(context, "camera");
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(10.0),
+                    child: FlatButton(
+                      child: Icon(
+                        Icons.add_photo_alternate,
+                      ),
+                      onPressed: (){
+                        _carregarArquivo(context, "galeria");
+                      },
+                    ),
+                  ),
+
+                ],
+              ),
+            );
+          },
+        );
+      }
+  );
+}
+
+void _carregarArquivo(BuildContext context, String texto) async{
+  await _ensureLoggedIn();
+
+  File imgFile;
+
+  if(texto == "camera"){
+    imgFile = await ImagePicker.pickImage(source: ImageSource.camera);
+  }else if(texto == "galeria"){
+    imgFile = await ImagePicker.pickImage(source: ImageSource.gallery);
+  }else{
+    print("Erro no carregamento de imagem: "+context.toString());
+  }
+
+  if(imgFile == null) return;
+  StorageUploadTask task = FirebaseStorage.instance.ref().
+  child(googleSignIn.currentUser.id.toString()
+      + DateTime.now().millisecondsSinceEpoch.toString()).putFile(imgFile);
+  StorageTaskSnapshot taskSnapshot = await task.onComplete;
+  String url = await taskSnapshot.ref.getDownloadURL();
+  DateTime time = DateTime.now();
+  _sendMessage(imageUrl: url, time: time);
+
+  Navigator.pop(context);
+}
