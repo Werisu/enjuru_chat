@@ -8,6 +8,20 @@ void main() {
   runApp(MyApp());
 }
 
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: "Enjuru Chats",
+      debugShowCheckedModeBanner: false,
+      theme: Theme.of(context).platform == TargetPlatform.iOS
+          ? kIOSTheme
+          : kDefaultTheme,
+      home: ChatScreen(),
+    );
+  }
+}
+
 final ThemeData kIOSTheme = ThemeData(
     primarySwatch: Colors.orange,
     primaryColor: Colors.grey,
@@ -23,12 +37,12 @@ final auth = FirebaseAuth.instance;
 
 Future<Null> _ensureLoggedIn() async{
   GoogleSignInAccount user = googleSignIn.currentUser;
-  if(user == null){
+  if(user == null)
     user = await googleSignIn.signInSilently();
-  }
-  if(user == null){
+
+  if(user == null)
     user = await googleSignIn.signIn();
-  }
+
   if(await auth.currentUser() == null){
     GoogleSignInAuthentication credential = await googleSignIn.currentUser.authentication;
     await auth.signInWithCredential(GoogleAuthProvider.
@@ -36,18 +50,20 @@ Future<Null> _ensureLoggedIn() async{
   }
 }
 
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "Enjuru Chats",
-      debugShowCheckedModeBanner: false,
-      theme: Theme.of(context).platform == TargetPlatform.iOS
-          ? kIOSTheme
-          : kDefaultTheme,
-      home: ChatScreen(),
-    );
-  }
+_handSubmitted(String text) async{
+  await _ensureLoggedIn();
+  _sendMessage(text: text);
+}
+
+void _sendMessage({String text, String imageUrl}){
+  Firestore.instance.collection("messages").add(
+      {
+        "text" : text,
+        "imageUrl" : imageUrl,
+        "senderName" : googleSignIn.currentUser.displayName,
+        "senderPhotoUrl" : googleSignIn.currentUser.photoUrl
+      }
+  );
 }
 
 class ChatScreen extends StatefulWidget {
@@ -101,6 +117,7 @@ class TextComposer extends StatefulWidget {
 }
 
 class _TextComposerState extends State<TextComposer> {
+  final _textController = TextEditingController();
   bool _isComposing = false;
 
   @override
@@ -123,12 +140,16 @@ class _TextComposerState extends State<TextComposer> {
             ),
             Expanded(
               child: TextField(
+                controller: _textController,
                 decoration:
                     InputDecoration.collapsed(hintText: "Enviar uma mensagem"),
                 onChanged: (text) {
                   setState(() {
                     _isComposing = text.length > 0;
                   });
+                },
+                onSubmitted: (text){
+                  _handSubmitted(text);
                 },
               ),
             ),
@@ -137,11 +158,15 @@ class _TextComposerState extends State<TextComposer> {
                 child: Theme.of(context).platform == TargetPlatform.iOS
                     ? CupertinoButton(
                         child: Text("Enviar"),
-                        onPressed: _isComposing ? () {} : null,
+                        onPressed: _isComposing ? () {
+                          _handSubmitted(_textController.text);
+                        } : null,
                       )
                     : IconButton(
                         icon: Icon(Icons.send),
-                        onPressed: _isComposing ? () {} : null,
+                        onPressed: _isComposing ? () {
+                          _handSubmitted(_textController.text);
+                        } : null,
                       ))
           ],
         ),
