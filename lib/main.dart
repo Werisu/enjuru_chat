@@ -1,15 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-void main(){
+void main() {
   runApp(MyApp());
 }
 
 final ThemeData kIOSTheme = ThemeData(
-  primarySwatch: Colors.orange,
-  primaryColor:  Colors.grey,
-  primaryColorBrightness: Brightness.light
-);
+    primarySwatch: Colors.orange,
+    primaryColor: Colors.grey,
+    primaryColorBrightness: Brightness.light);
 
 final ThemeData kDefaultTheme = ThemeData(
   primarySwatch: Colors.purple,
@@ -22,8 +22,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: "Enjuru Chats",
       debugShowCheckedModeBanner: false,
-      theme: Theme.of(context).platform == TargetPlatform.iOS ?
-          kIOSTheme : kDefaultTheme,
+      theme: Theme.of(context).platform == TargetPlatform.iOS
+          ? kIOSTheme
+          : kDefaultTheme,
       home: ChatScreen(),
     );
   }
@@ -44,7 +45,8 @@ class _ChatScreenState extends State<ChatScreen> {
         appBar: AppBar(
           title: Text("Enjuru Chats"),
           centerTitle: true,
-          elevation: Theme.of(context).platform == TargetPlatform.iOS ? 0.0 : 4.0,
+          elevation:
+              Theme.of(context).platform == TargetPlatform.iOS ? 0.0 : 4.0,
         ),
         body: Column(
           children: <Widget>[
@@ -67,39 +69,51 @@ class TextComposer extends StatefulWidget {
 }
 
 class _TextComposerState extends State<TextComposer> {
+  bool _isComposing = false;
+
   @override
   Widget build(BuildContext context) {
     return IconTheme(
       data: IconThemeData(color: Theme.of(context).accentColor),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 0.0),
-        decoration: Theme.of(context).platform == TargetPlatform.iOS ?
-        BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: Colors.grey[200]
-            )
-          )
-        ) : null,
+        decoration: Theme.of(context).platform == TargetPlatform.iOS
+            ? BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey[200])))
+            : null,
         child: Row(
           children: <Widget>[
             Container(
               child: IconButton(
                 icon: Icon(Icons.photo_camera),
-                onPressed: (){},
+                onPressed: () {},
               ),
             ),
             Expanded(
               child: TextField(
-                decoration: InputDecoration.collapsed(hintText: "Enviar uma mensagem"),
+                decoration:
+                    InputDecoration.collapsed(hintText: "Enviar uma mensagem"),
+                onChanged: (text) {
+                  setState(() {
+                    _isComposing = text.length > 0;
+                  });
+                },
               ),
-            )
+            ),
+            Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Theme.of(context).platform == TargetPlatform.iOS
+                    ? CupertinoButton(
+                        child: Text("Enviar"),
+                        onPressed: _isComposing ? () {} : null,
+                      )
+                    : IconButton(
+                        icon: Icon(Icons.send),
+                        onPressed: _isComposing ? () {} : null,
+                      ))
           ],
         ),
       ),
     );
   }
 }
-
-
-
