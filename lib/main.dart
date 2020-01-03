@@ -50,6 +50,18 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         body: Column(
           children: <Widget>[
+            Expanded(
+              child: ListView(
+                children: <Widget>[
+                  ChatMessage(),
+                  ChatMessage(),
+                  ChatMessage(),
+                ],
+              ),
+            ),
+            Divider(
+              height: 1.0,
+            ),
             Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
@@ -117,3 +129,39 @@ class _TextComposerState extends State<TextComposer> {
     );
   }
 }
+
+class ChatMessage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 10.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            margin: const EdgeInsets.only(right: 10.0),
+            child: CircleAvatar(
+              backgroundImage: NetworkImage("https://media-manager.noticiasaominuto.com/1920/1556264539/naom_5cb7221409201.jpg?crop_params=eyJsYW5kc2NhcGUiOnsiY3JvcFdpZHRoIjozNzYwLCJjcm9wSGVpZ2h0IjoyMTE1LCJjcm9wWCI6MCwiY3JvcFkiOjEzN30sInBvcnRyYWl0Ijp7ImNyb3BXaWR0aCI6MTQ4OSwiY3JvcEhlaWdodCI6MjY0OCwiY3JvcFgiOjExNTksImNyb3BZIjowfX0="),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  "Daniel",
+                  style: Theme.of(context).textTheme.subhead,
+                ),
+                Container(
+                  margin: const EdgeInsets.only(top: 5.0),
+                  child: Text("teste"),
+                )
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
